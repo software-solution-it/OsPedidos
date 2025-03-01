@@ -1,177 +1,276 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Image, 
+  Dimensions, 
+  Animated, 
+  ScrollView,
+  StatusBar,
+  Platform
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import SideMenu from '../components/SideMenu';
+
+const { width, height } = Dimensions.get('window');
+const isSmallScreen = width < 375 || height < 667;
+const isLargeScreen = width >= 768;
+
+const responsiveSize = (size: number, factor = 0.5): number => {
+  if (isSmallScreen) return size * (1 - factor);
+  if (isLargeScreen) return size * (1 + factor * 0.5);
+  return size;
+};
+
+// Dados dos módulos
+const modules = [
+  {
+    id: 1,
+    title: 'Módulo 1',
+    icon: 'cube',
+    color: '#4A90E2',
+    route: '/(modules)/1'
+  },
+  {
+    id: 2,
+    title: 'Módulo 2',
+    icon: 'cube',
+    color: '#5C9CE6',
+    route: '/(modules)/2'
+  },
+];
+
+// Update the module type definition
+type Module = {
+  id: number;
+  title: string;
+  icon: string;
+  color: string;
+  route: string;
+};
 
 const SelectCashScreen = () => {
-  const [cashAmount, setCashAmount] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuAnimation = useRef(new Animated.Value(0)).current;
+  const fadeAnimation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 4;
 
-  // Simulação de carregamento do valor no caixa
   useEffect(() => {
-    // Aqui você pode adicionar a lógica para carregar o valor do caixa do banco de dados ou de onde for necessário
-    setCashAmount(1000); // Valor simulado
+    // Animação de entrada
+    Animated.timing(fadeAnimation, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  const cashRegisters = [
-    { id: 1, name: 'Caixa 1', amount: 1000.00 },
-    { id: 2, name: 'Caixa 2', amount: 1500.00 },
-    { id: 3, name: 'Caixa 3', amount: 2000.00 },
-    { id: 4, name: 'Caixa 4', amount: 800.00 },
-    { id: 5, name: 'Caixa 5', amount: 1200.00 },
-    { id: 6, name: 'Caixa 6', amount: 1800.00 },
-    { id: 7, name: 'Caixa 7', amount: 900.00 },
-    { id: 8, name: 'Caixa 8', amount: 1100.00 },
-    { id: 9, name: 'Caixa 9', amount: 1600.00 },
-    { id: 10, name: 'Caixa 10', amount: 1300.00 },
-    { id: 11, name: 'Caixa 11', amount: 700.00 },
-    { id: 12, name: 'Caixa 12', amount: 1400.00 },
-  ];
-
-  const handleOpenCash = (cashRegisterId: number) => {
-    // Lógica para abrir o caixa
-    console.log(`Abrindo caixa: ${cashRegisterId}`);
-    router.push('/select-module');
+  const toggleMenu = () => {
+    const toValue = isMenuOpen ? 0 : 1;
+    
+    Animated.timing(menuAnimation, {
+      toValue,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    
+    setIsMenuOpen(!isMenuOpen);
   };
 
-  const renderCashRegisters = () => {
-    const startIndex = currentPage * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const visibleCashRegisters = cashRegisters.slice(startIndex, endIndex);
-
-    return visibleCashRegisters.map((cashRegister) => (
-      <TouchableOpacity
-        key={cashRegister.id}
-        style={styles.cashCard}
-        onPress={() => handleOpenCash(cashRegister.id)}
-      >
-        <View style={styles.cashCardContent}>
-          <Text style={styles.cashName}>{cashRegister.name}</Text>
-          <Text style={styles.cashAmount}>R$ {cashRegister.amount.toFixed(2)}</Text>
-        </View>
-      </TouchableOpacity>
-    ));
-  };
-
-  const handlePageChange = (direction: 'prev' | 'next') => {
-    const totalPages = Math.ceil(cashRegisters.length / itemsPerPage);
-    if (direction === 'prev' && currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    } else if (direction === 'next' && currentPage < totalPages - 1) {
-      setCurrentPage(currentPage + 1);
+  // Update the handleModuleSelect function
+  const handleModuleSelect = (route: string) => {
+    // Fechar o menu se estiver aberto
+    if (isMenuOpen) {
+      toggleMenu();
+      
+      // Aguardar a animação do menu fechar antes de navegar
+      setTimeout(() => {
+        router.push(route as any);
+      }, 300);
+    } else {
+      // Adicionar console.log para debug
+      console.log('Navegando para:', route);
+      router.push(route as any);
     }
   };
 
+  // Calcular a escala e translação do conteúdo principal
+  const mainScale = menuAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.95],
+  });
+  
+  const mainTranslateX = menuAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, width * 0.5],
+  });
+
   return (
-    <LinearGradient
-      colors={['#AEEEEE', '#B0E0E6', '#ADD8E6']}
-      style={styles.gradient}
-    >
-      <View style={styles.container}>
-        <Text style={styles.title}>Igreja Viva</Text>
-        <Text style={styles.subtitle}>Selecione o Caixa</Text>
-        <View style={styles.carouselContainer}>
-          {renderCashRegisters()}
-        </View>
-        <View style={styles.pagination}>
-          <TouchableOpacity
-            style={styles.paginationButton}
-            onPress={() => handlePageChange('prev')}
-            disabled={currentPage === 0}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Menu Lateral Componentizado */}
+      <SideMenu 
+        isOpen={isMenuOpen}
+        menuAnimation={menuAnimation}
+        onClose={toggleMenu}
+      />
+      
+      {/* Conteúdo Principal */}
+      <Animated.View 
+        style={[
+          styles.mainContent,
+          { 
+            opacity: fadeAnimation,
+            borderRadius: isMenuOpen ? 20 : 0,
+            transform: [
+              { scale: mainScale },
+              { translateX: mainTranslateX }
+            ]
+          }
+        ]}
+      >
+        <LinearGradient
+          colors={['#FFFFFF', '#F5F9FF']}
+          style={styles.mainGradient}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.menuButton}
+              onPress={toggleMenu}
+            >
+              <Ionicons name="menu" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>Selecione um Módulo</Text>
+            
+            <View style={styles.menuButtonPlaceholder} />
+          </View>
+          
+          <ScrollView 
+            style={styles.modulesContainer}
+            contentContainerStyle={styles.modulesContent}
+            showsVerticalScrollIndicator={false}
           >
-            <Ionicons name="chevron-back" size={24} color={currentPage === 0 ? '#ccc' : '#0a7ea4'} />
-          </TouchableOpacity>
-          <Text style={styles.pageIndicator}>
-            {currentPage + 1} / {Math.ceil(cashRegisters.length / itemsPerPage)}
-          </Text>
-          <TouchableOpacity
-            style={styles.paginationButton}
-            onPress={() => handlePageChange('next')}
-            disabled={currentPage === Math.ceil(cashRegisters.length / itemsPerPage) - 1}
-          >
-            <Ionicons name="chevron-forward" size={24} color={currentPage === Math.ceil(cashRegisters.length / itemsPerPage) - 1 ? '#ccc' : '#0a7ea4'} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </LinearGradient>
+            {modules.map((module) => (
+              <TouchableOpacity
+                key={module.id}
+                style={styles.moduleCard}
+                onPress={() => handleModuleSelect(module.route)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[module.color, lightenColor(module.color, 20)]}
+                  style={styles.moduleGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.moduleIconContainer}>
+                    <Ionicons name={module.icon} size={responsiveSize(40, 0.3)} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.moduleTitle}>{module.title}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </LinearGradient>
+      </Animated.View>
+    </View>
   );
 };
 
+// Função para clarear uma cor (para o gradiente)
+const lightenColor = (color: string, percent: number): string => {
+  // Esta é uma implementação simplificada
+  // Para uma implementação real, você pode usar uma biblioteca como 'color'
+  return color; // Retorna a mesma cor por enquanto
+};
+
 const styles = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
+    backgroundColor: '#1A4B8B',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  mainGradient: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4A90E2',
+    alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  menuButtonPlaceholder: {
+    width: 44,
+  },
+  headerTitle: {
+    fontSize: responsiveSize(20, 0.2),
+    fontWeight: '600',
+    color: '#4A90E2',
+  },
+  modulesContainer: {
+    flex: 1,
+  },
+  modulesContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    paddingTop: height * 0.05,
+    alignItems: 'center',
+  },
+  moduleCard: {
+    width: width * 0.85,
+    height: width * 0.4,
+    borderRadius: 15,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 20,
+  },
+  moduleGradient: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
   },
-  container: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    padding: 30,
+  moduleIconContainer: {
+    width: responsiveSize(80, 0.3),
+    height: responsiveSize(80, 0.3),
+    borderRadius: responsiveSize(40, 0.3),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#0a7ea4',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  carouselContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingVertical: 10,
-  },
-  cashCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  cashCardContent: {
-    alignItems: 'flex-start',
-  },
-  cashName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0a7ea4',
-    marginBottom: 5,
-  },
-  cashAmount: {
-    fontSize: 16,
-    color: '#333',
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 20,
-  },
-  paginationButton: {
-    padding: 10,
-  },
-  pageIndicator: {
-    fontSize: 16,
-    color: '#555',
+  moduleTitle: {
+    fontSize: responsiveSize(22, 0.2),
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
